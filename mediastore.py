@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import os, os.path, pprint
+import os, os.path
 from xml.dom.minidom import parse
+from collections import defaultdict
 
 MEDIA_TYPES = {'tvshow':'TV Shows','movie':'Movies'}
 
@@ -12,8 +13,9 @@ class Media:
         root = (dom.getElementsByTagName('movie') + dom.getElementsByTagName('tvshow'))[0]
         self.type = MEDIA_TYPES[root.tagName]
         self.tags = {}
-        self.tags['Title'] = root.getElementsByTagName('title')[0].firstChild.nodeValue
+        self.title = root.getElementsByTagName('title')[0].firstChild.nodeValue
         self.tags['Genre'] = list(map(lambda x: x.firstChild.nodeValue, root.getElementsByTagName('genre')))
+
 
 def recursive_media_search(rootdir):
     for root, _, files in os.walk(rootdir, topdown=False):
@@ -26,14 +28,29 @@ def recursive_media_search(rootdir):
                     pass
 
 
+def build_virtual_paths(rootdir):
+    allpath = '/{mediatype}/byTitle/{title}'
+    path = '/{mediatype}/by{tagname}/{tagvalue}/{title}'
+    vpaths = {}
+    vchildren = defaultdict(set)
+    vchildren['/'] = set()
+    for m in recursive_media_search(rootdir):
+        vchildren['/'].add(m.type)
+        vchildren['/'+m.type].add('byTitle')
+        vchildren['/'+m.type+'/byTitle'].add(m.title)
+        vpaths[allpath.format(mediatype=m.type, title=m.title)] = m.base
+        for tname, tvals in m.tags.items():
+            for tval in tvals:
+                vchildren['/'+m.type].add('by'+tname)
+                vchildren['/'+m.type+'/by'+tname].add(tval)
+                vchildren['/'+m.type+'/by'+tname+'/'+tval].add(m.title)
+                vpaths[path.format(mediatype=m.type, tagname=tname, tagvalue=tval, title=m.title)] = m.base
+    return vpaths, vchildren
+
+
+
 if __name__ == '__main__':
-    mcol = {}
-    for t in MEDIA_TYPES.values():
-        mcol[t] = {'byTitle':{}, 'byGenre':{}}
-    for m in recursive_media_search('/mnt/deadpool'):
-        mcol[m.type]['byTitle'][m.tags['Title']] = m.base
-        for g in m.tags['Genre']:
-            if not g in mcol[m.type]['byGenre']:
-                mcol[m.type]['byGenre'][g] = {}
-            mcol[m.type]['byGenre'][g][m.tags['Title']] = m.base
-    pprint.pprint(mcol, indent=4, width=200)
+    vpaths, vchildren = build_virtual_paths('/mnt/deadpool')
+    print(vchildren)
+    # for vpath, path in vpaths.items():
+    #     print(vpath, '->', path)
