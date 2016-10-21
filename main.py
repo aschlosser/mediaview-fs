@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import os
+import os.path
 import sys
 import errno
 import mediastore
@@ -29,8 +30,16 @@ class Mediaview(LoggingMixIn, Operations):
         return path in self.vchildren
 
     def convert_path(self, path):
-        # TODO fix leaf nodes not visible
-        return self.vpaths[path]
+        head = path
+        tail = ''
+        while not head in self.vpaths:
+            if head == '/':
+                raise FuseOSError(errno.ENOENT)
+            head, tt = os.path.split(head)
+            tail = os.path.join(tt, tail)
+        if tail.endswith('/'):
+            tail = tail[:-1]
+        return os.path.join(self.vpaths[head], tail)
 
     # Filesystem methods
     # ==================
@@ -74,17 +83,12 @@ class Mediaview(LoggingMixIn, Operations):
             return pathname
 
     def statfs(self, path):
-        # TODO adapt
-        # full_path = self._full_path(path)
-        # stv = os.statvfs(full_path)
-        # return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
-        #     'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
-        #     'f_frsize', 'f_namemax'))
-        return {}
+        st = os.statvfs(self.root)
+        fstat = dict((key, getattr(st, key)) for key in
+                            ('f_bsize', 'f_frsize', 'f_blocks', 'f_bfree', 'f_bavail', 'f_files', 'f_ffree', 'f_favail', 'f_namemax'))
+        fstat['f_flags'] = (os.ST_RDONLY | os.ST_NODIRATIME | os.ST_NOATIME)
+        return fstat
 
-    def utimens(self, path, times=None):
-        # TODO do we want this?
-        pass
 
     # File methods
     # ============
