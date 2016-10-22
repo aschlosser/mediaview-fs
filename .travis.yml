@@ -10,4 +10,4 @@ python:
 # command to install dependencies
 install: "pip install fusepy pylint"
 # command to run tests
-script: pylint -d invalid-name,fixme -rn *.py
+script: find -name '*.py' -exec pylint -d invalid-name,fixme -rn {} \;
