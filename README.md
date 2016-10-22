@@ -1,5 +1,5 @@
 # Mediaview-fs
-A fuse filesystem to provide a view of media files with tags
+A fuse filesystem to provide a readonly view of media files with tags parsed from .nfo files produced by [kodi](https://kodi.tv/) and [tinyMediaManager](http://www.tinymediamanager.org/).
 
 ## Requirements
 * Python 3.x
@@ -8,3 +8,6 @@ A fuse filesystem to provide a view of media files with tags
 
 ## Usage
 TBD
+
+## References
+mediaview-fs is based on [fusepy](https://github.com/terencehonles/fusepy), a Python wrapper for FUSE.
