@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
-import os, os.path
+import os, os.path, logging
 from xml.dom.minidom import parse
 from collections import defaultdict
+
+LOG = logging.getLogger('mediastore')
 
 MEDIA_TYPES = {'tvshow':'TV Shows','movie':'Movies'}
 
@@ -20,12 +22,13 @@ class Media:
 def recursive_media_search(rootdir):
     for root, _, files in os.walk(rootdir, topdown=False):
         for file in files:
+            file = os.path.join(root, file)
             if file.endswith('.nfo'):
                 try:
-                    m = Media(os.path.join(root, file))
+                    m = Media(file)
                     yield m
-                except:
-                    pass
+                except Exception as e:
+                    LOG.debug('Could not parse %s: %s', file, repr(e))
 
 
 def build_virtual_paths(rootdir):
@@ -46,11 +49,3 @@ def build_virtual_paths(rootdir):
                 vchildren['/'+m.type+'/by'+tname+'/'+tval].add(m.title)
                 vpaths[path.format(mediatype=m.type, tagname=tname, tagvalue=tval, title=m.title)] = m.base
     return vpaths, vchildren
-
-
-
-if __name__ == '__main__':
-    vpaths, vchildren = build_virtual_paths('/mnt/deadpool')
-    print(vchildren)
-    # for vpath, path in vpaths.items():
-    #     print(vpath, '->', path)

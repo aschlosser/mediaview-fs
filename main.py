@@ -14,7 +14,10 @@ NOT_WRITE = ~ (S_IWUSR | S_IWGRP | S_IWOTH)
 class Mediaview(LoggingMixIn, Operations):
     def __init__(self, root):
         self.root = root
+        print('Starting analysis of', root)
+        sys.stdout.flush()
         self.vpaths, self.vchildren = mediastore.build_virtual_paths(root)
+        print('Done')
         now = time()
         st = os.lstat(root)
         self.root_stat = dict((key, getattr(st, key)) for key in ('st_gid', 'st_nlink', 'st_size', 'st_uid'))
@@ -64,6 +67,16 @@ class Mediaview(LoggingMixIn, Operations):
             except KeyError:
                 return {}
 
+    def getxattr(self, path, name, position=0):
+        if self.is_virtual(path):
+            raise FuseOSError(errno.ENODATA)
+        return os.getxattr(self.convert_path(path), name)
+
+    def listxattr(self, path):
+        if self.is_virtual(path):
+            return []
+        return os.listxattr(path)
+
     def readdir(self, path, fh):
         if self.is_virtual(path):
             return {'.', '..'}.union(self.vchildren[path])
@@ -75,6 +88,7 @@ class Mediaview(LoggingMixIn, Operations):
             return children
 
     def readlink(self, path):
+        # TODO i have no idea if this works
         pathname = os.readlink(self.convert_path(path))
         if pathname.startswith("/"):
             # Path name is absolute, sanitize it.
@@ -102,19 +116,13 @@ class Mediaview(LoggingMixIn, Operations):
         os.lseek(fh, offset, os.SEEK_SET)
         return os.read(fh, length)
 
-    # def flush(self, path, fh):
-    #     return os.fsync(fh)
-
     def release(self, path, fh):
         return os.close(fh)
-
-    # def fsync(self, path, fdatasync, fh):
-    #     return self.flush(path, fh)
 
 
 def main(root, mountpoint):
     logging.basicConfig(level=logging.DEBUG)
-    FUSE(Mediaview(root), mountpoint, nothreads=True, foreground=True)
+    FUSE(Mediaview(root), mountpoint, nothreads=True, foreground=True, ro=True, noatime=True)
 
 
 if __name__ == '__main__':
