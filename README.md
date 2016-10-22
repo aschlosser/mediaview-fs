@@ -1,6 +1,8 @@
 # Mediaview-fs
 A fuse filesystem to provide a readonly view of media files with tags parsed from .nfo files produced by [kodi](https://kodi.tv/) and [tinyMediaManager](http://www.tinymediamanager.org/).
 
+![build](https://travis-ci.org/aschlosser/mediaview-fs.svg?branch=master "Build Status")
+
 ## Requirements
 * Python 3.x
 * fusepy 2.x
